@@ -57,7 +57,7 @@ pub fn part2(left: &Vec<u32>, right: &Vec<u32>) -> u32 {
     left.iter().map(|x| x * map.get(x).unwrap_or(&0)).sum()
 }
 
-pub fn list_distance(input: &Path) -> () {
+pub fn exec(input: &Path) -> () {
     let message: String = fs::read_to_string(input).unwrap();
 
     ///////////////////////////////////////////////////////////////////////////////////
