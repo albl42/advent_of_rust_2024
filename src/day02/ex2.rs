@@ -1,3 +1,10 @@
+/* Learnings and Takeaways:
+
+-> Checking Conditions: 'all' can sometimes be used instead of 'map' and 'fold'
+-> Adjacent Comparison: 'window' generates overlapping slices of a certain size
+-> Preallocate Vec Capacity: 'Vec::with_capacity'
+*/
+
 use std::fs;
 use std::path::Path;
 
@@ -18,62 +25,55 @@ pub fn parse_input(input: &str) -> Vec<Vec<u32>> {
 }
 
 pub fn is_monotonic_dec(level: &Vec<u32>) -> bool {
-    level
-        .into_iter()
-        .zip(level.into_iter().skip(1))
-        .map(|(l, r)| -> bool { *l > *r })
-        .fold(true, |acc, e| acc && e)
+    level.windows(2).all(|w| -> bool { w[0] > w[1] })
 }
 
 pub fn is_monotonic_inc(level: &Vec<u32>) -> bool {
-    level
-        .into_iter()
-        .zip(level.into_iter().skip(1))
-        .map(|(l, r)| -> bool { *l < *r })
-        .fold(true, |acc, e| acc && e)
+    level.windows(2).all(|w| -> bool { w[0] < w[1] })
 }
 
 pub fn at_most_three_apart(level: &Vec<u32>) -> bool {
     level
-        .into_iter()
-        .zip(level.into_iter().skip(1))
-        .map(|(l, r)| -> bool { u32::abs_diff(*l, *r) <= 3 })
-        .fold(true, |acc, e| acc && e)
+        .windows(2)
+        .all(|w| -> bool { u32::abs_diff(w[0], w[1]) <= 3 })
+}
+
+pub fn check_level(level: &Vec<u32>) -> bool {
+    at_most_three_apart(&level) && (is_monotonic_inc(&level) || is_monotonic_dec(&level))
 }
 
 pub fn part_one(levels: &Vec<Vec<u32>>) -> u32 {
-    levels
-        .into_iter()
-        .map(|l| at_most_three_apart(l) && (is_monotonic_inc(l) || is_monotonic_dec(l)))
-        .fold(0, |mut acc, e| {
-            if e {
-                acc += 1
-            };
-            acc
-        })
+    levels.into_iter().filter(|l| check_level(&l)).count() as u32
 }
 
-pub fn generate_subarrays(vec: &Vec<u32>) -> Vec<Vec<u32>> {
-    let mut vecs = vec![vec.clone()];
+// pub fn generate_subvecs_iterative(vec: &Vec<u32>) -> Vec<Vec<u32>> {
+//     let mut vecs = Vec::with_capacity(vec.len() + 1);
+//     vecs.push(vec.to_vec());
+//     for index in 0..vec.len() {
+//         let mut subvec = vec.clone();
+//         subvec.remove(index);
+//         vecs.push(subvec)
+//     }
+//     vecs
+// }
 
-    for index in 0..vec.len() {
-        let mut subvec = vec.clone();
-        subvec.remove(index);
-        vecs.push(subvec)
-    }
-    vecs
+pub fn generate_subvecs_functional(vec: &Vec<u32>) -> Vec<Vec<u32>> {
+    (0..vec.len())
+        .map(|i| {
+            let mut subvec = vec.to_vec();
+            subvec.remove(i);
+            subvec
+        })
+        .chain(std::iter::once(vec.to_vec()))
+        .collect()
 }
 
 pub fn part_two(levels: &Vec<Vec<u32>>) -> u32 {
-    levels.into_iter()
-    .map(generate_subarrays)
-    .map(|levels: Vec<Vec<u32>>| part_one(&levels))
-    .fold(0, |mut acc, e| {
-        if e > 0 {
-            acc += 1
-        };
-        acc
-    })
+    levels
+        .into_iter()
+        .map(generate_subvecs_functional)
+        .filter(|subvec| subvec.iter().any(check_level))
+        .count() as u32
 }
 
 pub fn exec(input: &Path) -> () {
