@@ -14,3 +14,7 @@ Day 03:
 Day 04:
     Part One: 2406
     Part Two: 1807
+
+Day 05:
+    Part One: 5452
+    Part Two: 4598

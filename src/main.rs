@@ -7,6 +7,7 @@ mod day01;
 mod day02;
 mod day03;
 mod day04;
+mod day05;
 
 fn input_file_path(day_number: u16, file_name: &str) -> PathBuf {
     Path::new("src")
@@ -38,6 +39,7 @@ fn exec_day(day: u8) {
         2 => day02::ex2::exec(&input_file_path(2, "input.txt")),
         3 => day03::ex3::exec(&input_file_path(3, "input.txt")),
         4 => day04::ex4::exec(&input_file_path(4, "input.txt")),
+        5 => day05::ex5::exec(&input_file_path(5, "input.txt")),
         _ => println!("To be implemented soon ... "),
     }
 }
@@ -45,7 +47,7 @@ fn exec_day(day: u8) {
 // cargo run
 // cargo run interactive
 fn main() {
-    let current_day: u8 = 4;
+    let current_day: u8 = 5;
 
     let args: Vec<String> = env::args().collect();
     if args.len() > 1 && args[1] == "interactive" {
