@@ -10,3 +10,7 @@ Day 02:
 Day 03:
     Part One: 156388521
     Part Two: 75920122
+
+Day 04:
+    Part One: 2406
+    Part Two: 1807
