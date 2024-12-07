@@ -1,37 +1,32 @@
 use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
+use std::time::Instant;
 
 type Position = (i32, i32);
 type Direction = (i32, i32);
 type Guard = (Position, Direction);
 
 pub fn parse_input(input: &str) -> Vec<Vec<char>> {
-    input.lines().map(|line| line.chars().collect()).fold(
-        vec![],
-        |mut v: Vec<Vec<char>>, e: Vec<char>| {
-            v.push(e);
-            v
-        },
-    )
+    input.lines().map(|line| line.chars().collect()).collect()
 }
 
-pub fn to_direction(direction: &char) -> Direction {
+pub fn parse_direction(direction: &char) -> (i32, i32) {
     match direction {
         '>' => (0, 1),
         'v' => (1, 0),
         '<' => (0, -1),
         '^' => (-1, 0),
-        _ => panic!("Direction {:?} is not valid!", direction),
+        _ => (0, 0),
     }
 }
 
 pub fn find_start_move(map: &Vec<Vec<char>>) -> Guard {
-    for x in 0..map.len() {
-        for y in 0..map[0].len() {
-            if map[x][y] != '#' && map[x][y] != '.' {
+    for (x, row) in map.into_iter().enumerate() {
+        for (y, &cell) in row.iter().enumerate() {
+            if cell != '#' && cell != '.' {
                 let pos = (to_i32(x), to_i32(y));
-                let dir = to_direction(&map[x][y]);
+                let dir = parse_direction(&cell);
                 return (pos, dir);
             }
         }
@@ -48,56 +43,68 @@ pub fn is_inside(map: &Vec<Vec<char>>, pos: &Position) -> bool {
 }
 
 pub fn is_blocked(map: &Vec<Vec<char>>, pos: &Position) -> bool {
-    is_inside(map, pos) && map[pos.0 as usize][pos.1 as usize] == '#'
+    map[pos.0 as usize][pos.1 as usize] == '#'
 }
 
-pub fn step_ahead(state: &Guard) -> Guard {
-    let x = state.0 .0 + state.1 .0;
-    let y = state.0 .1 + state.1 .1;
-    ((x, y), state.1)
+pub fn next_position(state: &Guard) -> Position {
+    (state.0 .0 + state.1 .0, state.0 .1 + state.1 .1)
 }
 
-pub fn turn_right((p, d): &Guard) -> Guard {
-    (*p, (d.1, -d.0))
+pub fn turn_right(dir: &Direction) -> Direction {
+    (dir.1, -dir.0)
 }
 
-pub fn next_move(map: &Vec<Vec<char>>, state: &Guard) -> Guard {
-    let next_state = step_ahead(state);
-    if is_blocked(map, &next_state.0) {
-        turn_right(state)
+pub fn advance_guard(map: &Vec<Vec<char>>, state: &Guard) -> Guard {
+    let next_pos = next_position(state);
+    if is_inside(map, &next_pos) && is_blocked(map, &next_pos) {
+        (state.0, turn_right(&state.1))
     } else {
-        next_state
+        (next_pos, state.1)
     }
 }
 
 pub fn generate_moves(map: &Vec<Vec<char>>, start_state: &Guard) -> Vec<Guard> {
-    let mut moves = vec![];
+    // Using a HashSet here reduces the complexity from O(n^2) to O(n)
+    // The execution time therefor was reduced from 300 seconds to 17 seconds
+    // Since the order of the moves is important we need an additional vector
+
+    let mut moves = HashSet::new();
+    let mut result = vec![];
     let mut curr_move = start_state.clone();
 
-    while is_inside(&map, &curr_move.0) && !moves.contains(&curr_move) {
-        moves.push(curr_move);
-        curr_move = next_move(&map, &curr_move);
+    while is_inside(&map, &curr_move.0) && moves.insert(curr_move.clone()) {
+        result.push(curr_move.clone());
+        curr_move = advance_guard(&map, &curr_move);
     }
-    moves
+    result
 }
 
 pub fn count_unique_pos(moves: Vec<Guard>) -> u32 {
-    let unique_pos: HashSet<Position> = moves.into_iter().map(|step: Guard| step.0).collect();
-    u32::try_from(unique_pos.iter().count()).unwrap()
+    moves
+        .into_iter()
+        .map(|step: Guard| step.0)
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .count() as u32
 }
 
-pub fn is_loop(map: &Vec<Vec<char>>, moves: &Vec<Guard>) -> bool {
-    let next_move = next_move(map, moves.last().unwrap());
-    is_inside(map, &next_move.0)
-}
-
-pub fn add_obstacle(map: &Vec<Vec<char>>, obs_pos: Position) -> Vec<Vec<char>> {
+pub fn make_map_add_obst(map: &Vec<Vec<char>>, obs_pos: Position) -> Vec<Vec<char>> {
     if is_inside(map, &obs_pos) {
         let mut new_map = map.clone();
         new_map[obs_pos.0 as usize][obs_pos.1 as usize] = '#';
         return new_map;
     }
     return map.clone();
+}
+
+pub fn detect_loop(map: &Vec<Vec<char>>, start: &Guard) -> bool {
+    let mut moves = HashSet::new();
+    let mut curr_move = start.clone();
+
+    while is_inside(&map, &curr_move.0) && moves.insert(curr_move.clone()) {
+        curr_move = advance_guard(&map, &curr_move);
+    }
+    is_inside(&map, &curr_move.0)
 }
 
 pub fn part_one(input: &str) -> u32 {
@@ -111,22 +118,12 @@ pub fn part_two(input: &str) -> u32 {
     let map = parse_input(input);
     let start_move = find_start_move(&map);
     let moves = generate_moves(&map, &start_move);
-    let maps_with_obstacle = moves
+    moves
         .into_iter()
-        .fold(HashSet::new(), |mut acc, original_move| {
-            let next_pos = step_ahead(&original_move);
-            if next_pos.0 != start_move.0 {
-                let new_map = add_obstacle(&map, next_pos.0);
-                acc.insert(new_map);
-            }
-            acc
-        });
-    maps_with_obstacle
+        .map(|state| make_map_add_obst(&map, state.0))
+        .collect::<HashSet<_>>()
         .into_iter()
-        .filter(|new_map| {
-            let new_path = generate_moves(&new_map, &start_move);
-            is_loop(&new_map, &new_path)
-        })
+        .filter(|new_map| detect_loop(&new_map, &start_move))
         .count() as u32
 }
 
@@ -136,6 +133,9 @@ pub fn exec(input: &Path) -> () {
     let result_one = part_one(&input);
     println!("Result part one: {:?}", result_one);
 
+    let start = Instant::now();
     let result_two = part_two(&input);
+    let elapsed = start.elapsed();
     println!("Result part two: {:?}", result_two);
+    println!("Part two took: {} seconds", elapsed.as_secs_f64());
 }
