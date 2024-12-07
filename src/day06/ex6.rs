@@ -111,18 +111,23 @@ pub fn part_two(input: &str) -> u32 {
     let map = parse_input(input);
     let start_move = find_start_move(&map);
     let moves = generate_moves(&map, &start_move);
-    moves
+    let maps_with_obstacle = moves
         .into_iter()
         .fold(HashSet::new(), |mut acc, original_move| {
             let next_pos = step_ahead(&original_move);
-            let new_map = add_obstacle(&map, next_pos.0);
-            let new_path = generate_moves(&new_map, &original_move);
-            if is_loop(&new_map, &new_path) && next_pos.0 != start_move.0 {
-                acc.insert(next_pos.0);
+            if next_pos.0 != start_move.0 {
+                let new_map = add_obstacle(&map, next_pos.0);
+                acc.insert(new_map);
             }
             acc
+        });
+    maps_with_obstacle
+        .into_iter()
+        .filter(|new_map| {
+            let new_path = generate_moves(&new_map, &start_move);
+            is_loop(&new_map, &new_path)
         })
-        .len() as u32
+        .count() as u32
 }
 
 pub fn exec(input: &Path) -> () {

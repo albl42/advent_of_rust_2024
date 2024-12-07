@@ -21,7 +21,7 @@ Day 05:
 
 Day 06:
     Part One: 5199
-    Part Two: 
+    Part Two: 1915
 
 Day 07:
     Part One: 1611660863222
