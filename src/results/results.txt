@@ -26,3 +26,7 @@ Day 06:
 Day 07:
     Part One: 1611660863222
     Part Two: 945341732469724
+
+Day 08:
+    Part One: 344
+    Part Two: 1182
